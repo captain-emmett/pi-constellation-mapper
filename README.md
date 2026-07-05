@@ -35,7 +35,16 @@ Star catalog + time/location
         Raspberry Pi device
 ```
 
-The exact hardware is intentionally not locked yet. Early exploration may include a small display, tactile buttons or a rotary control, GPS and orientation sensors, and a rechargeable USB power system. Each should remain optional until it proves the experience needs it.
+## Current hardware
+
+The first prototype is built around:
+
+- **Raspberry Pi 5 (8 GB):** application computer and hardware-integration host
+- **Raspberry Pi Touch Display 2 (5-inch):** primary display and touch interface
+- **Adafruit Mini GPS:** location and time input for calculating the visible sky
+- **Adafruit BNO085 IMU:** device orientation and movement input for aligning the view
+
+Portable power, enclosure design, cooling, and any additional physical controls are still open decisions. The software should keep each sensor behind a small interface so development can continue on a desktop when the hardware is disconnected.
 
 ## First milestones
 
@@ -44,7 +53,8 @@ The exact hardware is intentionally not locked yet. Early exploration may includ
 - [ ] Implement pan, zoom, time, and location controls
 - [ ] Add constellation creation, naming, and local persistence
 - [ ] Establish a night-friendly Pi interface and kiosk startup
-- [ ] Prototype the display, controls, and portable power setup
+- [ ] Integrate the Touch Display 2, GPS, and BNO085 on the Pi
+- [ ] Prototype the enclosure, cooling, controls, and portable power setup
 - [ ] Test outdoors and refine around real viewing conditions
 
 ## Design principles
@@ -58,15 +68,11 @@ The exact hardware is intentionally not locked yet. Early exploration may includ
 
 ## Open questions
 
-- Which Raspberry Pi model and display best balance size, power, and performance?
-- Is orientation manual at first, or assisted by GPS, compass, and IMU sensors?
+- How should GPS and IMU readings be calibrated, filtered, and reflected in the interface?
+- Should manual location and orientation remain available as fallbacks?
 - Should the first UI be a local web app, a Python-native interface, or another lightweight stack?
 - How much astronomical accuracy does the first prototype need?
 - What should a saved constellation contain beyond stars, lines, name, and story?
-
-## Project origin
-
-This repository begins from an earlier design conversation about a Raspberry Pi constellation-mapping device and its display, controls, portable power, and prototyping needs. The shared conversation is preserved as [background context](https://chatgpt.com/share/6a4ac070-b770-83ea-ae09-0787ded0ad65).
 
 ## Status
 
