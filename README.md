@@ -76,4 +76,28 @@ Portable power, enclosure design, cooling, and any additional physical controls 
 
 ## Status
 
-Early concept and architecture phase. The next useful step is a software-only sky-view prototype, followed by the smallest possible Raspberry Pi hardware test.
+An initial native starmap prototype is underway in Rust and Macroquad. It uses a small real bright-star catalog, the computer's current time, and a temporary observer location until the GPS is connected.
+
+## Development setup
+
+The first implementation deliberately avoids a browser. Macroquad opens a lightweight native OpenGL window and batches simple 2D drawing operations, making it a good fit for lower-powered Raspberry Pi models.
+
+Prerequisites:
+
+- Current stable Rust toolchain
+- A desktop OpenGL environment (Windows, Linux, or Raspberry Pi OS)
+
+Run the prototype:
+
+```shell
+cargo run
+```
+
+Controls:
+
+- Drag or single-finger swipe to rotate through the celestial sphere
+- Mouse wheel or two-finger pinch to zoom between a detailed view and a 180° hemisphere
+- Tap or click a star to inspect its apparent magnitude and current altitude/azimuth
+- `H` toggles the horizon, `R` resets the view, and `F` toggles fullscreen
+
+The current Los Angeles observer coordinates are an explicit development fallback. GPS and IMU providers will replace them behind hardware-independent interfaces.

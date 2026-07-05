@@ -7,8 +7,10 @@ __pycache__/
 node_modules/
 dist/
 
+# Rust
+target/
+
 # Editors and operating systems
-.vscode/
 .idea/
 .DS_Store
 Thumbs.db

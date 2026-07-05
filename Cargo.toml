@@ -1,0 +1,14 @@
+[package]
+name = "pi-constellation-mapper"
+version = "0.1.0"
+edition = "2024"
+description = "A lightweight, touch-first night-sky explorer for Raspberry Pi"
+
+[dependencies]
+macroquad = "0.4.15"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+opt-level = "s"
+strip = true
