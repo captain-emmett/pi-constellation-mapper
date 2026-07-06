@@ -108,11 +108,17 @@ On Raspberry Pi Touch Display 2, the app requests fullscreen after the composito
 
 ### Raspberry Pi kiosk panel
 
-The Raspberry Pi taskbar is owned by the Wayland desktop rather than this application. Enable its per-user autohide setting once with:
+The Raspberry Pi taskbar and fullscreen state are owned by the Wayland compositor rather than this application. Install a per-user labwc window rule and enable panel autohide once with:
 
 ```shell
 ./scripts/configure-pi-kiosk.sh
-sudo reboot
 ```
 
-This changes `~/.config/wf-panel-pi.ini` to use `autohide=1`, following Raspberry Pi's documented panel configuration. The setting persists for that desktop user and allows the taskbar to stay out of the way while the starmap is running.
+Close and relaunch the starmap afterward. The helper:
+
+- gives labwc a rule matching the app's `pi-constellation-mapper` window identity
+- lets labwc apply fullscreen instead of repeatedly toggling Macroquad's XWayland fullscreen API
+- changes `~/.config/wf-panel-pi.ini` to use `autohide=1`
+- preserves the original labwc configuration as `rc.xml.codex-backup`
+
+The panel setting persists for that desktop user. If labwc does not reload the rule immediately, log out and back in once. On non-Wayland desktops, the application continues to use its own `F`/`F11` fullscreen toggle.

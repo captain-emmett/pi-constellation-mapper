@@ -16,16 +16,25 @@ const ACCENT: Color = Color::new(0.35, 0.88, 0.92, 1.0);
 const WHEEL_ZOOM_PER_STEP: f32 = 0.94;
 
 fn window_conf() -> Conf {
+    let compositor_managed_kiosk = compositor_managed_kiosk();
     Conf {
         window_title: "Pi Constellation Mapper".to_owned(),
         window_width: 1_200,
         window_height: 720,
         high_dpi: false,
-        fullscreen: true,
+        fullscreen: !compositor_managed_kiosk,
         sample_count: 1,
         window_resizable: true,
+        platform: macroquad::miniquad::conf::Platform {
+            linux_wm_class: "pi-constellation-mapper",
+            ..Default::default()
+        },
         ..Default::default()
     }
+}
+
+fn compositor_managed_kiosk() -> bool {
+    cfg!(target_os = "linux") && std::env::var_os("WAYLAND_DISPLAY").is_some()
 }
 
 #[derive(Clone, Copy)]
@@ -242,9 +251,12 @@ struct ProjectedStar {
 #[macroquad::main(window_conf)]
 async fn main() {
     simulate_mouse_with_touch(false);
-    clear_background(BACKGROUND);
-    next_frame().await;
-    set_fullscreen(true);
+    let compositor_managed_kiosk = compositor_managed_kiosk();
+    if !compositor_managed_kiosk {
+        clear_background(BACKGROUND);
+        next_frame().await;
+        set_fullscreen(true);
+    }
 
     // Temporary development fallback. GPS coordinates will replace this observer.
     let observer = Observer {
@@ -258,7 +270,8 @@ async fn main() {
     let mut fullscreen = true;
 
     loop {
-        if is_key_pressed(KeyCode::F) || is_key_pressed(KeyCode::F11) {
+        if !compositor_managed_kiosk && (is_key_pressed(KeyCode::F) || is_key_pressed(KeyCode::F11))
+        {
             fullscreen = !fullscreen;
             set_fullscreen(fullscreen);
         }
