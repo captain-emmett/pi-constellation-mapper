@@ -80,7 +80,7 @@ An initial native starmap prototype is underway in Rust and Macroquad. It uses a
 
 ## Development setup
 
-The first implementation deliberately avoids a browser. Macroquad opens a lightweight native OpenGL window and batches simple 2D drawing operations, making it a good fit for lower-powered Raspberry Pi models.
+The first implementation deliberately avoids a browser. Macroquad opens a lightweight native OpenGL window and batches simple 2D drawing operations, making it a good fit for lower-powered Raspberry Pi models. Its edge-to-edge rectilinear projection treats the display like a window into the sky rather than a circular planetarium chart.
 
 Prerequisites:
 
@@ -96,8 +96,10 @@ cargo run
 Controls:
 
 - Drag or single-finger swipe to rotate through the celestial sphere
-- Mouse wheel or two-finger pinch to zoom between a detailed view and a 180° hemisphere
+- Mouse wheel or two-finger pinch adjusts the vertical field of view from 12° to 120°
 - Tap or click a star to inspect its apparent magnitude and current altitude/azimuth
 - `H` toggles the horizon, `R` resets the view, and `F` toggles fullscreen
+
+For a sky-matching view, adjust the displayed vertical and horizontal FOV values until the angular spacing between known stars matches what you see when holding the screen at your normal viewing distance. The IMU will eventually supply camera direction automatically; zoom remains the optical calibration.
 
 The current Los Angeles observer coordinates are an explicit development fallback. GPS and IMU providers will replace them behind hardware-independent interfaces.

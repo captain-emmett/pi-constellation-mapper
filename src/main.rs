@@ -9,7 +9,6 @@ use catalog::BRIGHT_STARS;
 use macroquad::prelude::*;
 
 const BACKGROUND: Color = Color::new(0.012, 0.018, 0.035, 1.0);
-const DOME_BACKGROUND: Color = Color::new(0.018, 0.029, 0.057, 1.0);
 const HORIZON_COLOR: Color = Color::new(0.24, 0.56, 0.58, 0.72);
 const TEXT_PRIMARY: Color = Color::new(0.86, 0.91, 0.98, 1.0);
 const TEXT_MUTED: Color = Color::new(0.48, 0.58, 0.72, 1.0);
@@ -39,8 +38,8 @@ impl SkyCamera {
     fn new() -> Self {
         Self {
             yaw: 0.0,
-            pitch: 45.0_f32.to_radians(),
-            field_of_view: 180.0_f32.to_radians(),
+            pitch: 30.0_f32.to_radians(),
+            field_of_view: 60.0_f32.to_radians(),
         }
     }
 
@@ -53,7 +52,7 @@ impl SkyCamera {
 
     fn zoom_by(&mut self, factor: f32) {
         self.field_of_view =
-            (self.field_of_view * factor).clamp(12.0_f32.to_radians(), 180.0_f32.to_radians());
+            (self.field_of_view * factor).clamp(12.0_f32.to_radians(), 120.0_f32.to_radians());
     }
 
     fn reset(&mut self) {
@@ -183,21 +182,12 @@ async fn main() {
         clear_background(BACKGROUND);
 
         let center = vec2(screen_width() * 0.5, screen_height() * 0.5);
-        let dome_radius = (screen_width().min(screen_height()) * 0.5 - 22.0).max(120.0);
-        draw_circle(center.x, center.y, dome_radius, DOME_BACKGROUND);
 
         if show_horizon {
-            draw_horizon(&camera, center, dome_radius);
+            draw_horizon(&camera);
         }
 
-        let projected = draw_stars(
-            &camera,
-            observer,
-            unix_seconds,
-            center,
-            dome_radius,
-            selected_star,
-        );
+        let projected = draw_stars(&camera, observer, unix_seconds, selected_star);
 
         if let Some(tap) = tap_position {
             selected_star = projected
@@ -210,13 +200,6 @@ async fn main() {
                 .map(|(index, _)| index);
         }
 
-        draw_circle_lines(
-            center.x,
-            center.y,
-            dome_radius,
-            1.5,
-            Color::new(0.18, 0.31, 0.48, 0.9),
-        );
         draw_crosshair(center);
         draw_hud(&camera, observer, selected_star, &projected);
 
@@ -228,8 +211,6 @@ fn draw_stars(
     camera: &SkyCamera,
     observer: Observer,
     unix_seconds: f64,
-    center: Vec2,
-    dome_radius: f32,
     selected_star: Option<usize>,
 ) -> Vec<ProjectedStar> {
     let mut projected = Vec::with_capacity(BRIGHT_STARS.len());
@@ -237,7 +218,7 @@ fn draw_stars(
     for (index, star) in BRIGHT_STARS.iter().enumerate() {
         let horizontal = equatorial_to_horizontal(star, observer, unix_seconds);
         let direction = horizontal_direction(horizontal);
-        let Some(position) = project_direction(direction, camera, center, dome_radius) else {
+        let Some(position) = project_direction(direction, camera) else {
             continue;
         };
 
@@ -256,7 +237,7 @@ fn draw_stars(
 
         if selected_star == Some(index) {
             draw_circle_lines(position.x, position.y, radius + 7.0, 1.5, ACCENT);
-        } else if star.magnitude <= 0.5 && camera.field_of_view.to_degrees() <= 125.0 {
+        } else if star.magnitude <= 0.5 && camera.field_of_view.to_degrees() <= 90.0 {
             draw_text(
                 star.name,
                 position.x + 8.0,
@@ -276,22 +257,17 @@ fn draw_stars(
     projected
 }
 
-fn draw_horizon(camera: &SkyCamera, center: Vec2, dome_radius: f32) {
+fn draw_horizon(camera: &SkyCamera) {
     let mut previous: Option<Vec2> = None;
     for azimuth in 0..=360 {
         let horizontal = HorizontalCoordinates {
             azimuth_deg: azimuth as f64,
             altitude_deg: 0.0,
         };
-        let current = project_direction(
-            horizontal_direction(horizontal),
-            camera,
-            center,
-            dome_radius,
-        );
+        let current = project_direction(horizontal_direction(horizontal), camera);
 
         if let (Some(from), Some(to)) = (previous, current)
-            && from.distance(to) < dome_radius * 0.12
+            && from.distance(to) < screen_width().max(screen_height()) * 0.12
         {
             draw_line(from.x, from.y, to.x, to.y, 1.35, HORIZON_COLOR);
         }
@@ -303,12 +279,7 @@ fn draw_horizon(camera: &SkyCamera, center: Vec2, dome_radius: f32) {
             azimuth_deg: azimuth,
             altitude_deg: 0.0,
         };
-        if let Some(position) = project_direction(
-            horizontal_direction(horizontal),
-            camera,
-            center,
-            dome_radius,
-        ) {
+        if let Some(position) = project_direction(horizontal_direction(horizontal), camera) {
             draw_circle(
                 position.x,
                 position.y,
@@ -352,11 +323,14 @@ fn draw_hud(
     selected_star: Option<usize>,
     projected: &[ProjectedStar],
 ) {
+    let horizontal_fov =
+        2.0 * ((camera.field_of_view * 0.5).tan() * (screen_width() / screen_height())).atan();
     draw_text("PI CONSTELLATION MAPPER", 20.0, 31.0, 22.0, TEXT_PRIMARY);
     draw_text(
         format!(
-            "FOV {:>3.0} deg  |  {:.2}, {:.2}  |  {} FPS",
+            "FOV V {:>3.0} deg / H {:>3.0} deg  |  {:.2}, {:.2}  |  {} FPS",
             camera.field_of_view.to_degrees(),
+            horizontal_fov.to_degrees(),
             observer.latitude_deg,
             observer.longitude_deg,
             get_fps()
@@ -446,12 +420,7 @@ fn horizontal_direction(horizontal: HorizontalCoordinates) -> Vec3 {
     )
 }
 
-fn project_direction(
-    direction: Vec3,
-    camera: &SkyCamera,
-    center: Vec2,
-    radius: f32,
-) -> Option<Vec2> {
+fn project_direction(direction: Vec3, camera: &SkyCamera) -> Option<Vec2> {
     let forward = vec3(
         camera.pitch.cos() * camera.yaw.sin(),
         camera.pitch.sin(),
@@ -460,23 +429,25 @@ fn project_direction(
     let right = vec3(camera.yaw.cos(), 0.0, -camera.yaw.sin());
     let up = forward.cross(right);
 
-    let cosine = direction.dot(forward).clamp(-1.0, 1.0);
-    let angle = cosine.acos();
-    let half_fov = camera.field_of_view * 0.5;
-    if angle > half_fov {
+    let depth = direction.dot(forward);
+    if depth <= 0.001 {
         return None;
     }
 
-    let lateral_x = direction.dot(right);
-    let lateral_y = direction.dot(up);
-    let lateral_length = (lateral_x * lateral_x + lateral_y * lateral_y).sqrt();
-    if lateral_length < 0.000_01 {
-        return Some(center);
-    }
+    // A rectilinear pinhole projection makes the display behave like a physical
+    // window. When the vertical FOV matches the angle subtended by the screen at
+    // the viewer's eye, star spacing on the display matches the sky behind it.
+    let focal_length = screen_height() * 0.5 / (camera.field_of_view * 0.5).tan();
+    let center = vec2(screen_width() * 0.5, screen_height() * 0.5);
+    let position = vec2(
+        center.x + direction.dot(right) / depth * focal_length,
+        center.y - direction.dot(up) / depth * focal_length,
+    );
+    let margin = 32.0;
 
-    let radial_distance = angle / half_fov * radius;
-    Some(vec2(
-        center.x + radial_distance * lateral_x / lateral_length,
-        center.y - radial_distance * lateral_y / lateral_length,
-    ))
+    (position.x >= -margin
+        && position.x <= screen_width() + margin
+        && position.y >= -margin
+        && position.y <= screen_height() + margin)
+        .then_some(position)
 }
