@@ -26,23 +26,27 @@ fi
 
 cp -n "$labwc_config" "$labwc_config.codex-backup" 2>/dev/null || true
 
-if ! grep -q 'identifier="pi-constellation-mapper"' "$labwc_config"; then
+# Older versions of this helper matched WM_CLASS. Match the fixed window title
+# instead so the rule works consistently for both native and XWayland clients.
+sed -i 's/identifier="pi-constellation-mapper"/title="Pi Constellation Mapper"/g' "$labwc_config"
+
+if ! grep -q 'title="Pi Constellation Mapper"' "$labwc_config"; then
     if grep -q '</windowRules>' "$labwc_config"; then
         sed -i '/<\/windowRules>/i\
-    <windowRule identifier="pi-constellation-mapper" serverDecoration="no">\
+    <windowRule title="Pi Constellation Mapper" serverDecoration="no">\
       <action name="ToggleFullscreen" />\
     </windowRule>' "$labwc_config"
     elif grep -q '</labwc_config>' "$labwc_config"; then
         sed -i '/<\/labwc_config>/i\
   <windowRules>\
-    <windowRule identifier="pi-constellation-mapper" serverDecoration="no">\
+    <windowRule title="Pi Constellation Mapper" serverDecoration="no">\
       <action name="ToggleFullscreen" />\
     </windowRule>\
   </windowRules>' "$labwc_config"
     elif grep -q '</openbox_config>' "$labwc_config"; then
         sed -i '/<\/openbox_config>/i\
   <windowRules>\
-    <windowRule identifier="pi-constellation-mapper" serverDecoration="no">\
+    <windowRule title="Pi Constellation Mapper" serverDecoration="no">\
       <action name="ToggleFullscreen" />\
     </windowRule>\
   </windowRules>' "$labwc_config"

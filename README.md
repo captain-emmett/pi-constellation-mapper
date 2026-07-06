@@ -116,7 +116,7 @@ The Raspberry Pi taskbar and fullscreen state are owned by the Wayland composito
 
 Close and relaunch the starmap afterward. The helper:
 
-- gives labwc a rule matching the app's `pi-constellation-mapper` window identity
+- gives labwc a rule matching the app's fixed `Pi Constellation Mapper` window title
 - lets labwc apply fullscreen instead of repeatedly toggling Macroquad's XWayland fullscreen API
 - changes `~/.config/wf-panel-pi.ini` to use `autohide=1`
 - preserves the original labwc configuration as `rc.xml.codex-backup`
