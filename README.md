@@ -104,4 +104,15 @@ For a sky-matching view, adjust the displayed vertical and horizontal FOV values
 
 The current Los Angeles observer coordinates are an explicit development fallback. GPS and IMU providers will replace them behind hardware-independent interfaces.
 
-On Raspberry Pi Touch Display 2, the app requests the native 720×1280 fullscreen mode at startup. Raspberry Pi OS may expose touch as either true multitouch or desktop mouse-equivalence, so the on-screen zoom controls remain available even when the window backend does not deliver multiple touch contacts.
+On Raspberry Pi Touch Display 2, the app requests fullscreen after the compositor has mapped its window. Raspberry Pi OS may expose touch as either true multitouch or desktop mouse-equivalence, so the on-screen zoom controls remain available even when the window backend does not deliver multiple touch contacts. When fullscreen is toggled off, the 1200×720 desktop window can be freely resized for testing.
+
+### Raspberry Pi kiosk panel
+
+The Raspberry Pi taskbar is owned by the Wayland desktop rather than this application. Enable its per-user autohide setting once with:
+
+```shell
+./scripts/configure-pi-kiosk.sh
+sudo reboot
+```
+
+This changes `~/.config/wf-panel-pi.ini` to use `autohide=1`, following Raspberry Pi's documented panel configuration. The setting persists for that desktop user and allows the taskbar to stay out of the way while the starmap is running.

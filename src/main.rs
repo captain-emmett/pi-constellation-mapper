@@ -18,12 +18,12 @@ const WHEEL_ZOOM_PER_STEP: f32 = 0.94;
 fn window_conf() -> Conf {
     Conf {
         window_title: "Pi Constellation Mapper".to_owned(),
-        window_width: 720,
-        window_height: 1_280,
+        window_width: 1_200,
+        window_height: 720,
         high_dpi: false,
         fullscreen: true,
         sample_count: 1,
-        window_resizable: false,
+        window_resizable: true,
         ..Default::default()
     }
 }
@@ -242,6 +242,8 @@ struct ProjectedStar {
 #[macroquad::main(window_conf)]
 async fn main() {
     simulate_mouse_with_touch(false);
+    clear_background(BACKGROUND);
+    next_frame().await;
     set_fullscreen(true);
 
     // Temporary development fallback. GPS coordinates will replace this observer.
