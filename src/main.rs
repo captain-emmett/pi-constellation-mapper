@@ -13,6 +13,7 @@ const HORIZON_COLOR: Color = Color::new(0.24, 0.56, 0.58, 0.72);
 const TEXT_PRIMARY: Color = Color::new(0.86, 0.91, 0.98, 1.0);
 const TEXT_MUTED: Color = Color::new(0.48, 0.58, 0.72, 1.0);
 const ACCENT: Color = Color::new(0.35, 0.88, 0.92, 1.0);
+const WHEEL_ZOOM_PER_STEP: f32 = 0.94;
 
 fn window_conf() -> Conf {
     Conf {
@@ -127,11 +128,22 @@ impl PointerTracker {
 
         let wheel = mouse_wheel().1;
         if wheel.abs() > f32::EPSILON {
-            camera.zoom_by(0.88_f32.powf(wheel));
+            camera.zoom_by(WHEEL_ZOOM_PER_STEP.powf(normalized_wheel_steps(wheel)));
         }
 
         None
     }
+}
+
+fn normalized_wheel_steps(delta: f32) -> f32 {
+    // Windows may expose the native WHEEL_DELTA value (120 per notch), while
+    // other backends and trackpads generally report small or fractional steps.
+    let steps = if delta.abs() > 10.0 {
+        delta / 120.0
+    } else {
+        delta
+    };
+    steps.clamp(-3.0, 3.0)
 }
 
 #[derive(Clone, Copy)]
@@ -450,4 +462,25 @@ fn project_direction(direction: Vec3, camera: &SkyCamera) -> Option<Vec2> {
         && position.y >= -margin
         && position.y <= screen_height() + margin)
         .then_some(position)
+}
+
+#[cfg(test)]
+mod input_tests {
+    use super::normalized_wheel_steps;
+
+    #[test]
+    fn normalizes_windows_wheel_delta_to_one_step() {
+        assert!((normalized_wheel_steps(120.0) - 1.0).abs() < f32::EPSILON);
+        assert!((normalized_wheel_steps(-120.0) + 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn preserves_fractional_trackpad_steps() {
+        assert!((normalized_wheel_steps(0.25) - 0.25).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn clamps_large_bursts() {
+        assert!((normalized_wheel_steps(960.0) - 3.0).abs() < f32::EPSILON);
+    }
 }
