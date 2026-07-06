@@ -39,8 +39,15 @@ if ! grep -q 'identifier="pi-constellation-mapper"' "$labwc_config"; then
       <action name="ToggleFullscreen" />\
     </windowRule>\
   </windowRules>' "$labwc_config"
+    elif grep -q '</openbox_config>' "$labwc_config"; then
+        sed -i '/<\/openbox_config>/i\
+  <windowRules>\
+    <windowRule identifier="pi-constellation-mapper" serverDecoration="no">\
+      <action name="ToggleFullscreen" />\
+    </windowRule>\
+  </windowRules>' "$labwc_config"
     else
-        printf 'Could not find </labwc_config> in %s\n' "$labwc_config" >&2
+        printf 'Could not find a supported labwc root closing tag in %s\n' "$labwc_config" >&2
         exit 1
     fi
 fi
