@@ -76,4 +76,49 @@ Portable power, enclosure design, cooling, and any additional physical controls 
 
 ## Status
 
-Early concept and architecture phase. The next useful step is a software-only sky-view prototype, followed by the smallest possible Raspberry Pi hardware test.
+An initial native starmap prototype is underway in Rust and Macroquad. It uses a small real bright-star catalog, the computer's current time, and a temporary observer location until the GPS is connected.
+
+## Development setup
+
+The first implementation deliberately avoids a browser. Macroquad opens a lightweight native OpenGL window and batches simple 2D drawing operations, making it a good fit for lower-powered Raspberry Pi models. Its edge-to-edge rectilinear projection treats the display like a window into the sky rather than a circular planetarium chart.
+
+Prerequisites:
+
+- Current stable Rust toolchain
+- A desktop OpenGL environment (Windows, Linux, or Raspberry Pi OS)
+
+Run the prototype:
+
+```shell
+cargo run
+```
+
+Controls:
+
+- Drag or single-finger swipe to rotate through the celestial sphere
+- Mouse wheel, two-finger pinch, or the on-screen `+`/`−` buttons adjust the field of view
+- Tap or click a star to inspect its apparent magnitude and current altitude/azimuth
+- The app starts fullscreen; `F` or `F11` toggles fullscreen, `H` toggles the horizon, and `R` resets the view
+
+For a sky-matching view, adjust the displayed vertical and horizontal FOV values until the angular spacing between known stars matches what you see when holding the screen at your normal viewing distance. The IMU will eventually supply camera direction automatically; zoom remains the optical calibration.
+
+The current Los Angeles observer coordinates are an explicit development fallback. GPS and IMU providers will replace them behind hardware-independent interfaces.
+
+On Raspberry Pi Touch Display 2, the app requests fullscreen after the compositor has mapped its window. Raspberry Pi OS may expose touch as either true multitouch or desktop mouse-equivalence, so the on-screen zoom controls remain available even when the window backend does not deliver multiple touch contacts. When fullscreen is toggled off, the 1200×720 desktop window can be freely resized for testing.
+
+### Raspberry Pi kiosk panel
+
+The Raspberry Pi taskbar and fullscreen state are owned by the Wayland compositor rather than this application. Install a per-user labwc window rule and enable panel autohide once with:
+
+```shell
+./scripts/configure-pi-kiosk.sh
+```
+
+Close and relaunch the starmap afterward. The helper:
+
+- gives labwc a rule matching the app's fixed `Pi Constellation Mapper` window title
+- lets labwc apply fullscreen instead of repeatedly toggling Macroquad's XWayland fullscreen API
+- changes `~/.config/wf-panel-pi.ini` to use `autohide=1`
+- preserves the original labwc configuration as `rc.xml.codex-backup`
+
+The panel setting persists for that desktop user. If labwc does not reload the rule immediately, log out and back in once. On non-Wayland desktops, the application continues to use its own `F`/`F11` fullscreen toggle.
