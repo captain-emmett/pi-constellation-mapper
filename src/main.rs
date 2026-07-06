@@ -18,12 +18,12 @@ const WHEEL_ZOOM_PER_STEP: f32 = 0.94;
 fn window_conf() -> Conf {
     Conf {
         window_title: "Pi Constellation Mapper".to_owned(),
-        window_width: 1_200,
-        window_height: 720,
-        high_dpi: true,
-        fullscreen: false,
+        window_width: 720,
+        window_height: 1_280,
+        high_dpi: false,
+        fullscreen: true,
         sample_count: 1,
-        window_resizable: true,
+        window_resizable: false,
         ..Default::default()
     }
 }
@@ -72,7 +72,16 @@ struct PointerTracker {
 
 impl PointerTracker {
     fn update(&mut self, camera: &mut SkyCamera) -> Option<Vec2> {
-        let touch_positions: Vec<Vec2> = touches().iter().map(|touch| touch.position).collect();
+        let touch_positions: Vec<Vec2> = touches()
+            .iter()
+            .filter(|touch| {
+                !matches!(
+                    touch.phase,
+                    macroquad::input::TouchPhase::Ended | macroquad::input::TouchPhase::Cancelled
+                )
+            })
+            .map(|touch| touch.position)
+            .collect();
 
         if !touch_positions.is_empty() {
             self.mouse_last = None;
@@ -80,11 +89,15 @@ impl PointerTracker {
 
             if touch_positions.len() >= 2 {
                 let distance = touch_positions[0].distance(touch_positions[1]).max(1.0);
-                if let Some(previous_distance) = self.pinch_last_distance {
-                    camera.zoom_by((previous_distance / distance).clamp(0.82, 1.22));
+                if let Some(factor) = self
+                    .pinch_last_distance
+                    .and_then(|previous| pinch_zoom_factor(previous, distance))
+                {
+                    camera.zoom_by(factor);
                 }
                 self.pinch_last_distance = Some(distance);
                 self.touch_last = None;
+                self.touch_start = None;
                 return None;
             }
 
@@ -146,6 +159,79 @@ fn normalized_wheel_steps(delta: f32) -> f32 {
     steps.clamp(-3.0, 3.0)
 }
 
+fn pinch_zoom_factor(previous_distance: f32, current_distance: f32) -> Option<f32> {
+    if previous_distance <= 0.0 || current_distance <= 0.0 {
+        return None;
+    }
+
+    let factor = previous_distance / current_distance;
+    ((factor - 1.0).abs() >= 0.008).then(|| factor.clamp(0.96, 1.04))
+}
+
+#[derive(Clone, Copy)]
+struct TouchControls {
+    zoom_in: Rect,
+    zoom_out: Rect,
+}
+
+impl TouchControls {
+    fn layout() -> Self {
+        let size = 58.0;
+        let margin = 18.0;
+        let gap = 10.0;
+        let x = screen_width() - size - margin;
+        let zoom_out_y = screen_height() - size - 38.0;
+
+        Self {
+            zoom_in: Rect::new(x, zoom_out_y - size - gap, size, size),
+            zoom_out: Rect::new(x, zoom_out_y, size, size),
+        }
+    }
+
+    fn handle_tap(self, position: Vec2, camera: &mut SkyCamera) -> bool {
+        if self.zoom_in.contains(position) {
+            camera.zoom_by(0.92);
+            true
+        } else if self.zoom_out.contains(position) {
+            camera.zoom_by(1.08);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn draw(self) {
+        draw_touch_button(self.zoom_in, "+");
+        draw_touch_button(self.zoom_out, "-");
+    }
+}
+
+fn draw_touch_button(bounds: Rect, label: &str) {
+    draw_rectangle(
+        bounds.x,
+        bounds.y,
+        bounds.w,
+        bounds.h,
+        Color::new(0.025, 0.047, 0.085, 0.88),
+    );
+    draw_rectangle_lines(
+        bounds.x,
+        bounds.y,
+        bounds.w,
+        bounds.h,
+        1.5,
+        Color::new(0.25, 0.52, 0.64, 0.95),
+    );
+    let text = measure_text(label, None, 30, 1.0);
+    draw_text(
+        label,
+        bounds.x + (bounds.w - text.width) * 0.5,
+        bounds.y + (bounds.h + text.height) * 0.5 - 2.0,
+        30.0,
+        TEXT_PRIMARY,
+    );
+}
+
 #[derive(Clone, Copy)]
 struct ProjectedStar {
     index: usize,
@@ -156,6 +242,7 @@ struct ProjectedStar {
 #[macroquad::main(window_conf)]
 async fn main() {
     simulate_mouse_with_touch(false);
+    set_fullscreen(true);
 
     // Temporary development fallback. GPS coordinates will replace this observer.
     let observer = Observer {
@@ -166,10 +253,10 @@ async fn main() {
     let mut pointer = PointerTracker::default();
     let mut selected_star: Option<usize> = None;
     let mut show_horizon = true;
-    let mut fullscreen = false;
+    let mut fullscreen = true;
 
     loop {
-        if is_key_pressed(KeyCode::F) {
+        if is_key_pressed(KeyCode::F) || is_key_pressed(KeyCode::F11) {
             fullscreen = !fullscreen;
             set_fullscreen(fullscreen);
         }
@@ -201,7 +288,10 @@ async fn main() {
 
         let projected = draw_stars(&camera, observer, unix_seconds, selected_star);
 
-        if let Some(tap) = tap_position {
+        let touch_controls = TouchControls::layout();
+        if let Some(tap) = tap_position
+            && !touch_controls.handle_tap(tap, &mut camera)
+        {
             selected_star = projected
                 .iter()
                 .filter_map(|star| {
@@ -213,6 +303,7 @@ async fn main() {
         }
 
         draw_crosshair(center);
+        touch_controls.draw();
         draw_hud(&camera, observer, selected_star, &projected);
 
         next_frame().await;
@@ -466,7 +557,7 @@ fn project_direction(direction: Vec3, camera: &SkyCamera) -> Option<Vec2> {
 
 #[cfg(test)]
 mod input_tests {
-    use super::normalized_wheel_steps;
+    use super::{normalized_wheel_steps, pinch_zoom_factor};
 
     #[test]
     fn normalizes_windows_wheel_delta_to_one_step() {
@@ -482,5 +573,18 @@ mod input_tests {
     #[test]
     fn clamps_large_bursts() {
         assert!((normalized_wheel_steps(960.0) - 3.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn ignores_tiny_pinch_jitter() {
+        assert!(pinch_zoom_factor(100.0, 100.5).is_none());
+    }
+
+    #[test]
+    fn limits_pinch_change_per_frame() {
+        let zoom_in = pinch_zoom_factor(100.0, 120.0).expect("pinch should zoom in");
+        let zoom_out = pinch_zoom_factor(120.0, 100.0).expect("pinch should zoom out");
+        assert!((zoom_in - 0.96).abs() < f32::EPSILON);
+        assert!((zoom_out - 1.04).abs() < f32::EPSILON);
     }
 }

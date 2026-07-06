@@ -96,10 +96,12 @@ cargo run
 Controls:
 
 - Drag or single-finger swipe to rotate through the celestial sphere
-- Mouse wheel or two-finger pinch adjusts the vertical field of view from 12° to 120°
+- Mouse wheel, two-finger pinch, or the on-screen `+`/`−` buttons adjust the field of view
 - Tap or click a star to inspect its apparent magnitude and current altitude/azimuth
-- `H` toggles the horizon, `R` resets the view, and `F` toggles fullscreen
+- The app starts fullscreen; `F` or `F11` toggles fullscreen, `H` toggles the horizon, and `R` resets the view
 
 For a sky-matching view, adjust the displayed vertical and horizontal FOV values until the angular spacing between known stars matches what you see when holding the screen at your normal viewing distance. The IMU will eventually supply camera direction automatically; zoom remains the optical calibration.
 
 The current Los Angeles observer coordinates are an explicit development fallback. GPS and IMU providers will replace them behind hardware-independent interfaces.
+
+On Raspberry Pi Touch Display 2, the app requests the native 720×1280 fullscreen mode at startup. Raspberry Pi OS may expose touch as either true multitouch or desktop mouse-equivalence, so the on-screen zoom controls remain available even when the window backend does not deliver multiple touch contacts.
